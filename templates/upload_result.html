@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <title>Prediction Result</title>
+    <style>
+        /* Add inline styles for this template if needed */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+        }
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }
+        a {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .table-container {
+        overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prediction Result</h1>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        {% for key in data.fieldnames %}
+                        <th>{{ key }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                    <tr>
+                        {% for key, value in row.items() %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="/">Back to Home</a>
+    </div>
+</body>
+</html>

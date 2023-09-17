@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <title>Prediction Result</title>
+    <style>
+        /* Add inline styles for this template if needed */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f8f8;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        strong {
+            color: #007BFF;
+        }
+        a {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prediction Result</h1>
+        <p>Model used: {{ model }}</p>
+        <p>Patient is diagnosed as: <strong>{{ result }}</strong></p>
+        <a href="/">Back to Home</a>
+    </div>
+</body>
+</html>
