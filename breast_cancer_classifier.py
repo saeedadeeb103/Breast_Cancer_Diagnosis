@@ -1,7 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request
 import csv
-from io import StringIO
-import numpy as np
 import pandas as pd
 from sklearn.datasets import load_breast_cancer
 from sklearn.preprocessing import StandardScaler
@@ -10,120 +8,109 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
+from app.services.uploader import UploadHandler
 
 app = Flask(__name__)
 
-# Load the breast cancer dataset
-breast_cancer_data = load_breast_cancer()
+class BreastCancerApp:
+    def __init__(self, app):
+        self.app = app
+        self.setup_routes()
+        self.setup_models()
 
-# Create a DataFrame
-df = pd.DataFrame(breast_cancer_data.data, columns=breast_cancer_data.feature_names)
-df['label'] = breast_cancer_data.target
+    def setup_routes(self):
+        self.app.add_url_rule('/', view_func=self.index)
+        self.app.add_url_rule('/predict', view_func=self.predict, methods=['POST'])
+        self.app.add_url_rule('/upload', view_func=self.upload, methods=['GET', 'POST'])
+        self.app.add_url_rule('/upload_result', view_func=self.upload_result)
+    
+    def setup_models(self):
+        self.model_accuracies = {}
+        self.breast_cancer_data = load_breast_cancer()
+        # Create a DataFrame
+        self.df = pd.DataFrame(self.breast_cancer_data.data, columns=self.breast_cancer_data.feature_names)
+        self.df['label'] = self.breast_cancer_data.target
+        # Split the data
+        X = self.df.drop(columns='label', axis=1)
+        Y = self.df['label']
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.2, random_state=2)
 
-# Split the data
-X = df.drop(columns='label', axis=1)
-Y = df['label']
-x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=2)
+        # Standardize features
+        self.scaler = StandardScaler()
+        self.x_train_scaled = self.scaler.fit_transform(self.x_train)
+        self.x_test_scaled = self.scaler.transform(self.x_test)
 
-# Standardize features
-scaler = StandardScaler()
-x_train_scaled = scaler.fit_transform(x_train)
-x_test_scaled = scaler.transform(x_test)
-
-# Define models
-models = {
-    'Logistic Regression': LogisticRegression(),
-    'Random Forest': RandomForestClassifier(random_state=2),
-    'Gradient Boosting': GradientBoostingClassifier(random_state=2),
-    'SVM': SVC(random_state=2),
-    'XGBoost': XGBClassifier(random_state=2),
-}
-
-@app.route('/')
-def index():
-    feature_names = breast_cancer_data.feature_names
-    return render_template('index.html', feature_names=feature_names)
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    if request.method == 'POST':
-        model_name = request.form['model']
-        features = [float(request.form[feature]) for feature in breast_cancer_data.feature_names]
-        scaled_features = scaler.transform([features])
-        model = models[model_name]
+        # Define models
+        self.models = {
+            'Logistic Regression': LogisticRegression(C=1, penalty='l1', solver='saga', multi_class='ovr', max_iter=150, random_state=40),
+            'Random Forest': RandomForestClassifier(n_estimators=100),
+            'Gradient Boosting': GradientBoostingClassifier(random_state=2),
+            'SVM': SVC(random_state=2),
+            'XGBoost': XGBClassifier(random_state=2),
+        }
         
-        # Fit the model on the training data (if not already fitted)
-        if not hasattr(model, 'classes_'):
-            model.fit(x_train_scaled, y_train)
-        
-        prediction = model.predict(scaled_features)
-        result = 'Malignant' if prediction[0] == 0 else 'Benign'
-        return render_template('result.html', model=model_name, result=result)
+        for model_name, model in self.models.items():
+            if not hasattr(model, 'classes_'):
+                if model_name == 'Logistic Regression':
+                    self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.2, random_state=2)
+                    
+                elif model_name == 'Random Forest':
+                    self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
-@app.route('/upload', methods=['GET', 'POST'])
-def upload():
-    model_name = ""  # Default model_name
-    if request.method == 'POST':
-        uploaded_file = request.files['file']
-        data_list = []
-        if uploaded_file.filename != '':
-            # Save the uploaded file
-            uploaded_file.save(uploaded_file.filename)
+                self.x_train_scaled = self.scaler.fit_transform(self.x_train)
+                self.x_test_scaled = self.scaler.transform(self.x_test)
+                model.fit(self.x_train_scaled, self.y_train)
 
-            # Load the uploaded data and check column names
-            uploaded_data = pd.read_csv(uploaded_file.filename)
-            uploaded_columns = uploaded_data.columns.tolist()
-            uploaded_columns = np.array(uploaded_columns, dtype='<U23')
-            if not np.array_equal(uploaded_columns, breast_cancer_data.feature_names):
-                uploaded_columns = breast_cancer_data.feature_names
-            # Check if the uploaded columns match the original features
-            if set(uploaded_columns).issubset(set(breast_cancer_data.feature_names)):
-                # Keep only the columns that match the original features
-                try:
-                    uploaded_data = uploaded_data[breast_cancer_data.feature_names]
-                except: 
-                    return "Uploaded data contains missing Column" 
+            y_pred = model.predict(self.x_test_scaled)
+            accuracy = accuracy_score(self.y_test, y_pred)
+            self.model_accuracies[model_name] = accuracy
 
-                if uploaded_data.isnull().values.any():
-                    return "Uploaded data contains missing values."
+    def index(self):
+        feature_names = self.df.columns[:-1]
+        return render_template('index.html', feature_names=feature_names, model_accuracies=self.model_accuracies)
 
-                # Create a buffer for the updated CSV data
-                output_buffer = StringIO()
-                csv_writer = csv.writer(output_buffer)
+    def predict(self):
+        if request.method == 'POST':
+            model_name = request.form['model']
+            if model_name == 'Random Forest':
+                self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.X, self.Y, test_size=0.2, random_state=42)
+                self.x_train_scaled = self.scaler.fit_transform(self.x_train)
+            features = [float(request.form[feature]) for feature in self.df.columns[:-1]]
+            scaled_features = self.scaler.transform([features])
+            model = self.models[model_name]
 
-                # Write the header row for the updated CSV
-                updated_header = list(uploaded_data.columns) + ['Result']
-                csv_writer.writerow(updated_header)
+            # Fit the model on the training data (if not already fitted)
+            if not hasattr(model, 'classes_'):
+                model.fit(self.x_train_scaled, self.y_train)
 
-                # Iterate through each row in the uploaded data
-                for _, row in uploaded_data.iterrows():
-                    features = row.values
-                    scaled_features = scaler.transform([features])
-                    model_name = request.form['model']  # Update model_name here
-                    model = models[model_name]
+            prediction = model.predict(scaled_features)
+            result = 'Malignant' if prediction[0] == 0 else 'Benign'
+            return render_template('result.html', model=model_name, result=result)
 
-                    # Check if the model has been fitted, and fit it if not
-                    if not hasattr(model, 'classes_'):
-                        model.fit(x_train_scaled, y_train)
+    def upload(self):
+        self.breast_cancer_data = load_breast_cancer()
+        model_name = ""  # Default model_name
+        if request.method == 'POST':
+            uploaded_file = request.files['file']
+            model_name = request.form['model']
+            data_list = []
+            if uploaded_file.filename != '':
+                # Save the uploaded file
+                Upload_handler = UploadHandler(self.models)
+                output_buffer = Upload_handler.process_upload(file=uploaded_file, model_name=model_name, cancer_data=self.breast_cancer_data, x_trained=self.x_train, y_trained=self.y_train)
 
-                    prediction = model.predict(scaled_features)
-                    result = 'Malignant' if prediction[0] == 0 else 'Benign'
-                    updated_row = list(features) + [result]
-                    csv_writer.writerow(updated_row)
-
-                # Reset the buffer position
-                output_buffer.seek(0)
-
+                if isinstance(output_buffer, str):
+                    return output_buffer
+                
                 # Render the 'upload_result.html' template with the updated CSV data
                 return render_template('upload_result.html', data=csv.DictReader(output_buffer), model=model_name)
-            else:
-                return "Uploaded data columns do not match the original features."
+        return render_template('upload.html')
 
-    return render_template('upload.html')
-
-
-
+    def upload_result(self):
+        # This route can be implemented if needed for displaying upload results
+        pass
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    breast_cancer_app = BreastCancerApp(app)  # Create an instance of the class
+    app.run(debug=True)  # Run the Flask app
