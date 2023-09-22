@@ -17,11 +17,9 @@
                 <div class="form-group">
                     <label for="model">Choose a Model:</label>
                     <select name="model" id="model" class="select-box">
-                        <option value="Logistic Regression">Logistic Regression</option>
-                        <option value="Random Forest">Random Forest</option>
-                        <option value="Gradient Boosting">Gradient Boosting</option>
-                        <option value="SVM">SVM</option>
-                        <option value="XGBoost">XGBoost</option>
+                        {% for model, accuracy in model_accuracies.items() %}
+                        <option value="{{ model }}">{{ model }} (Accuracy: {{ '%.2f'|format(accuracy * 100) }}%)</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <h3>Enter Patient Data:</h3>
@@ -57,12 +55,10 @@
             <form method="POST" action="/upload" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="upload-model">Select a Model:</label>
-                    <select name="model" id="upload-model" class="select-box">
-                        <option value="Logistic Regression">Logistic Regression</option>
-                        <option value="Random Forest">Random Forest</option>
-                        <option value="Gradient Boosting">Gradient Boosting</option>
-                        <option value="SVM">SVM</option>
-                        <option value="XGBoost">XGBoost</option>
+                    <select name="model" id="model" class="select-box">
+                        {% for model, accuracy in model_accuracies.items() %}
+                        <option value="{{ model }}">{{ model }} (Accuracy: {{ '%.2f'|format(accuracy * 100) }}%)</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
