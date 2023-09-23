@@ -10,6 +10,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
 from app.services.uploader import UploadHandler
+from app.models.models import ModelAccuracy
 
 app = Flask(__name__)
 
@@ -50,21 +51,9 @@ class BreastCancerApp:
             'XGBoost': XGBClassifier(random_state=2),
         }
         
-        for model_name, model in self.models.items():
-            if not hasattr(model, 'classes_'):
-                if model_name == 'Logistic Regression':
-                    self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.2, random_state=2)
-                    
-                elif model_name == 'Random Forest':
-                    self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
-
-                self.x_train_scaled = self.scaler.fit_transform(self.x_train)
-                self.x_test_scaled = self.scaler.transform(self.x_test)
-                model.fit(self.x_train_scaled, self.y_train)
-
-            y_pred = model.predict(self.x_test_scaled)
-            accuracy = accuracy_score(self.y_test, y_pred)
-            self.model_accuracies[model_name] = accuracy
+        model_accuracy = ModelAccuracy(models=self.models,
+                                       scaler= self.scaler)
+        self.model_accuracies = model_accuracy.setup_accuracy(X, Y)
 
     def index(self):
         feature_names = self.df.columns[:-1]
