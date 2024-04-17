@@ -20,22 +20,28 @@ The Breast Cancer Diagnosis Web Application is a Flask-based tool designed to as
 ### Setup
 Clone the repository and set up a virtual environment:
 bash
+```
 git clone https://github.com/yourgithubusername/Breast_Cancer_Diagnosis.git
 cd Breast_Cancer_Diagnosis
 python -m venv venv
 source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+```
 
 
 Install the required packages:
 bash
+```
 pip install -r requirements.txt
+```
 
 
 ## Usage
 
 To run the application locally:
 bash
+```
 flask run
+```
 
 Navigate to http://127.0.0.1:5000/ in your web browser to start using the application.
 
